@@ -1,15 +1,29 @@
 from __future__ import annotations
 
+import os
+import platform
+import sys
+import time
+
 from fastapi import APIRouter
 from pydantic import BaseModel
 
 router = APIRouter(prefix="/health")
+
+START_TIME = time.time()
 
 
 class HealthResponse(BaseModel):
     status: str
     service: str
     version: str
+
+
+class SystemInfoResponse(BaseModel):
+    os: str
+    python_version: str
+    uptime_seconds: float
+    cpu_count: int | None
 
 
 @router.get(
@@ -40,3 +54,19 @@ async def readiness() -> HealthResponse:
 async def test_endpoint() -> dict[str, str]:
     """Sample endpoint for manual testing and validation."""
     return {"message": "API Gateway is reachable and responsive!"}
+
+
+@router.get(
+    "/info",
+    response_model=SystemInfoResponse,
+    summary="System Information",
+    description="Returns basic system information and uptime.",
+    operation_id="health_info",
+)
+async def system_info() -> SystemInfoResponse:
+    return SystemInfoResponse(
+        os=f"{platform.system()} {platform.release()}",
+        python_version=sys.version.split()[0],
+        uptime_seconds=round(time.time() - START_TIME, 2),
+        cpu_count=os.cpu_count(),
+    )
